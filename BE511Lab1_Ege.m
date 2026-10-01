@@ -102,9 +102,80 @@ for p = 1:3
     exportgraphics(gcf, sprintf('Figures2/partE_mean_setup_%d.png', p), 'Resolution', 300);
 
 end
+%% Tau (immersion and removal, one figure per setup)
 
-%% Tau
+for p = 1:3
+    figure(p + 3);
+    clf; % debbug again
+    set(gcf, 'Units', 'inches', 'Position', [1 1 6.5 7]); % squareish for the page
+    tl = tiledlayout(3, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+    for t = 1:3
+        T = temp{p, t};
+        s = dunk(p, t);
+        e = removal(p, t);
 
+        % immersion tau (63.2% of the rise)
+        tmIn = ((1:length(T))' - s) * dt; % time from dunk
+        initialValue = T(s);
+        finalValue = mean(T(e - 9:e)); % water plateau before removal
+        targetIn = initialValue + (finalValue - initialValue) * (1 - 1/exp(1));
+        c = s;
+        while T(c) < targetIn
+            c = c + 1;
+        end
+        endIn = interp1([T(c - 1), T(c)], [tmIn(c - 1), tmIn(c)], targetIn);
+        tau(p, t) = endIn - tmIn(s);
+
+        % removal tau (fall to 1/e of the drop)
+        tmOut = ((1:length(T))' - e) * dt; % time from removal
+        initialValue = T(e);
+        finalValue = mean(T(end - 9:end)); % air plateau at end of record
+        targetOut = finalValue + (initialValue - finalValue) * (1/exp(1));
+        c = e;
+        while T(c) > targetOut
+            c = c + 1;
+        end
+        endOut = interp1([T(c - 1), T(c)], [tmOut(c - 1), tmOut(c)], targetOut);
+        tauOut(p, t) = endOut - tmOut(e);
+
+        % immersion plot, 2 of 5 columns
+        nexttile([1 2]);
+        h = plotTau(tmIn, T, s, endIn, targetIn);
+        xlim([-1, 5]);
+        ylabel('Temp. (\circC)');
+        if t == 1
+            title({'Immersion', sprintf('Test %d: \\tau = %.3f s', t, tau(p, t))});
+        else
+            title(sprintf('Test %d: \\tau = %.3f s', t, tau(p, t)));
+        end
+        if t == 3
+            xlabel('Time from Immersion (s)');
+        end
+
+        % removal plot, 3 of 5 columns
+        nexttile([1 3]);
+        plotTau(tmOut, T, e, endOut, targetOut);
+        xlim([-1, 15]);
+        yticklabels([]); % same y axis as immersion
+        if t == 1
+            title({'Removal', sprintf('Test %d: \\tau = %.3f s', t, tauOut(p, t))});
+        else
+            title(sprintf('Test %d: \\tau = %.3f s', t, tauOut(p, t)));
+        end
+        if t == 3
+            xlabel('Time from Removal (s)');
+        end
+    end
+    title(tl, sprintf('R_s = %.1f \\Omega', Rs(p)));
+    lgd = legend(h, 'Temperature', 'Start', 'End (\tau)', 'Target Level', 'NumColumns', 4);
+    lgd.Layout.Tile = 'south'; % one legend under all panels
+    fprintf('Rs = %.1f ohms: immersion tau = %.3f +/- %.3f s\n', Rs(p), mean(tau(p, :)), std(tau(p, :)));
+    fprintf('Rs = %.1f ohms: removal tau = %.3f +/- %.3f s\n', Rs(p), mean(tauOut(p, :)), std(tauOut(p, :)));
+    set(findall(gcf, '-property', 'FontSize'), 'FontSize', fontSize);
+    exportgraphics(gcf, sprintf('Figures2/partE_tau_setup_%d.png', p), 'Resolution', 300);
+end
+%{ 
+%Tau
 for p = 1:3
     figure(p + 3);
     clf; % debbug again
@@ -149,9 +220,57 @@ for p = 1:3
     exportgraphics(gcf, sprintf('Figures2/partE_tau_dunk_setup_%d.png', p), 'Resolution', 300);
 end
 
+% Tau removal
+
+for p = 1:3
+    figure(p + 6);
+    clf;
+    set(gcf, 'Units', 'inches', 'Position', [1 1 6.5 7.5]);
+    tl = tiledlayout(3, 1, 'TileSpacing', 'compact');
+    for t = 1:3
+        T = temp{p, t};
+        e = removal(p, t);
+        tm = ((1:length(T))' - e) * dt; % time from removal
+
+        initialValue = T(e);
+        finalValue = mean(T(end - 9:end)); % air plateau at end of record
+        target = finalValue + (initialValue - finalValue) * (1/exp(1));
+
+        % interpolation
+        c = e;
+        while T(c) > target
+            c = c + 1;
+        end
+        endTime = interp1([T(c - 1), T(c)], [tm(c - 1), tm(c)], target);
+        tauOut(p, t) = endTime - tm(e);
+
+        % Plot
+        nexttile;
+        hold on;
+        plot(tm, T, 'k.-', 'LineWidth', 1.5, 'MarkerSize', 12);
+        plot(tm(e), T(e), 'go', 'MarkerFaceColor', 'g', 'MarkerSize', 9);
+        plot(endTime, target, 'rx', 'MarkerSize', 14, 'LineWidth', 2.5);
+        yline(target, 'r:', 'LineWidth', 1.5);
+        xlim([-1, 15]);
+        xlabel('Time from Removal (s)');
+        ylabel('Temperature (\circC)');
+        title(sprintf('Test %d, \\tau = %.3f s', t, tauOut(p, t)));
+        if t == 1
+            legend('Temperature', 'Start', 'End (36.8%)', '36.8% Level', 'Location', 'northeast');
+        end
+    end
+    title(tl, sprintf('R_s = %.1f \\Omega', Rs(p)));
+    fprintf('Rs = %.1f ohms: removal tau = %.3f +/- %.3f s\n', Rs(p), mean(tauOut(p, :)), std(tauOut(p, :)));
+    set(findall(gcf, '-property', 'FontSize'), 'FontSize', fontSize);
+    exportgraphics(gcf, sprintf('Figures2/partE_tau_removal_setup_%d.png', p), 'Resolution', 300);
+end
+%} 
+
+
+
 %% Voltage vs Temperature
 
-figure(7);
+figure(10);
 clf; % debug thingy
 set(gcf, 'Units', 'inches', 'Position', [1 1 6.5 4.5]);
 hold on;
@@ -178,4 +297,15 @@ function h = plotMeanStd(x, Y, color)
     hFill = fill([x; flipud(x)], [mu - sd; flipud(mu + sd)], color, 'FaceAlpha', 0.2, 'EdgeColor', 'none');
     hMean = plot(x, mu, '-', 'Color', color, 'LineWidth', 2);
     h = [hFill, hMean];
+end
+
+% tau plot with start and end markers
+function h = plotTau(tm, T, start, endTime, target)
+hold on;
+h1 = plot(tm, T, 'k.-', 'LineWidth', 1.5, 'MarkerSize', 8);
+h2 = plot(tm(start), T(start), 'go', 'MarkerFaceColor', 'g', 'MarkerSize', 9);
+h3 = plot(endTime, target, 'rx', 'MarkerSize', 14, 'LineWidth', 2.5);
+h4 = yline(target, 'r:', 'LineWidth', 1.5);
+ylim([15, 80]); % lowest reading is 18.4 C, highest 74.3 C
+h = [h1, h2, h3, h4];
 end

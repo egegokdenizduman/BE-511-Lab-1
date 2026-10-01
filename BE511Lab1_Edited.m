@@ -1,6 +1,9 @@
 clearvars
 clc
 close all;
+if ~exist('Figures2', 'dir')
+    mkdir('Figures2');
+end
 set(groot, 'DefaultFigureWindowStyle', 'normal'); % new figures start undocked so the size sticks
 voltage = linspace(2, 12, 6);
 power = 0.05;
@@ -10,7 +13,7 @@ fontSize = 14; % pt at the 6.5 in width the figures go into the report
 for i = 1:6
     current(i) = power/voltage(i);
     resistance(i) = voltage(i) / current(i);
-    Rs(i) = Vs/Is(i);
+    Rs(i) = Vs/current(i);
 end
 
 for i = 1:6
@@ -30,6 +33,7 @@ set(gcf, 'WindowStyle', 'normal', 'Units', 'inches', 'Position', [1 1 6.5 5.75])
 hold on;
 plot(power ./ vSmooth, vSmooth, 'k-', 'LineWidth', 2.5);
 plot(current, voltage, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 7); % the 2 V steps
+plot(Is, voltage1, '--', 'LineWidth', 2); % CHANGED: new line, 400 ohm is unsafe
 plot(Is, voltage2, 'LineWidth', 2);
 plot(Is, voltage3, 'LineWidth', 2);
 plot(Is, voltage4, 'LineWidth', 2);
@@ -40,8 +44,9 @@ ylabel("Voltage (V)");
 title("Maximum Power Line and Load Lines (V_s = 10 V)");
 xlim([0, .025]);
 ylim([0, 12]);
-legend("Maximum Power Line (50 mW)", "Max Power at 2 V Steps", "R_s = 2000 \Omega", "R_s = 1000 \Omega", ...
-    "R_s = 666.67 \Omega", "R_s = 500 \Omega", "R_s = 400 \Omega", 'Location', 'southoutside', 'NumColumns', 2);
+legend("Maximum Power Line (50 mW)", "Max Power at 2 V Steps", "R_s = 400 \Omega (unsafe)", ...
+    "R_s = 800 \Omega", "R_s = 1200 \Omega", "R_s = 1600 \Omega", "R_s = 2000 \Omega", ...
+    "R_s = 2400 \Omega", 'Location', 'southoutside', 'NumColumns', 2);
 set(findall(gcf, '-property', 'FontWeight'), 'FontSize', fontSize, 'FontWeight', 'bold');
 exportgraphics(gcf, 'Figures2/partA_load_lines.png', 'Resolution', 300);
 

@@ -1,0 +1,17 @@
+\documentclass[border=6pt]{standalone}
+\usepackage[american]{circuitikz}
+\begin{document}
+\begin{circuitikz}
+  % ELVIS III variable power supply
+  \draw (0,0) to[V, invert, l={$V_s = 10\,\mathrm{V}$}] (0,3)
+  % source resistor with bias current
+        to[R, l=$R_s$, i>^=$I_b$] (4,3)
+  % NTC thermistor (sensor)
+        to[thRn, l_=$R_T$, v^>=$V_{out}$, *-*] (4,0)
+        -- (0,0);
+  % ELVIS III analog input across the thermistor
+  \draw (4,3) -- (6,3) node[ocirc, label=right:{AI0}] {};
+  \draw (4,0) -- (6,0) node[ocirc, label=right:{AGND}] {};
+  \draw (2,0) node[ground] {};
+\end{circuitikz}
+\end{document}
